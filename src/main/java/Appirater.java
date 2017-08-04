@@ -36,6 +36,11 @@ import android.widget.TextView;
 
 public class Appirater {
 
+    /* Change the market_url for other markets i.e. Amazon App Store
+    	Google Play = market://details?id=%s
+    	Amazon App Store = http://www.amazon.com/gp/mas/dl/android?p=%s */
+    public static final String market_url = "market://details?id=%s";
+
 	private static final String PREF_LAUNCH_COUNT = "launch_count";
 	private static final String PREF_EVENT_COUNT = "event_count";
 	private static final String PREF_RATE_CLICKED = "rateclicked";
@@ -43,9 +48,8 @@ public class Appirater {
 	private static final String PREF_DATE_REMINDER_PRESSED = "date_reminder_pressed";
 	private static final String PREF_DATE_FIRST_LAUNCHED = "date_firstlaunch";
 	private static final String PREF_APP_VERSION_CODE = "versioncode";
-    private static final String PREF_APP_LOVE_CLICKED= "loveclicked";
     public static String appName;
-    public static boolean testMode, askIfLoved; 
+    public static boolean testMode; 
 	
     public static void appLaunched(Context mContext, int days_until_prompt, int launches_until_prompt,
                                    int events_until_prompt, int days_before_reminding) {
@@ -55,12 +59,8 @@ public class Appirater {
         SharedPreferences.Editor editor = prefs.edit();
         
         if(testMode){
-            if (!askIfLoved || prefs.getBoolean(PREF_APP_LOVE_CLICKED, false)) {
-                showRateDialog(mContext,editor);
-            } else {
-                showLoveDialog(mContext, editor);
-            }
-        	return;
+            showRateDialog(mContext,editor);
+        	  return;
         }
         
         // Increment launch counter
@@ -101,19 +101,11 @@ public class Appirater {
 			long millisecondsToWait = days_until_prompt * 24 * 60 * 60 * 1000L;			
 			if (System.currentTimeMillis() >= (date_firstLaunch + millisecondsToWait) || event_count >= events_until_prompt) {
 				if(date_reminder_pressed == 0){
-                    if (!askIfLoved || prefs.getBoolean(PREF_APP_LOVE_CLICKED, false)){
-                        showRateDialog(mContext, editor);
-                    } else {
-                        showLoveDialog(mContext, editor);
-                    }
+            showRateDialog(mContext, editor);
 				}else{
 					long remindMillisecondsToWait = days_before_reminding * 24 * 60 * 60 * 1000L;
 					if(System.currentTimeMillis() >= (remindMillisecondsToWait + date_reminder_pressed)){
-                        if (!askIfLoved || prefs.getBoolean(PREF_APP_LOVE_CLICKED, false)) {
-                            showRateDialog(mContext, editor);
-                        } else {
-                            showLoveDialog(mContext, editor);
-                        }
+              showRateDialog(mContext, editor);
 					}
 				}
 			}
@@ -140,7 +132,7 @@ public class Appirater {
     }
 
     private static void rateApp(Context mContext, final SharedPreferences.Editor editor) {
-        mContext.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(String.format(mContext.getString(R.string.appirator_market_url), mContext.getPackageName()))));
+        mContext.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(String.format(market_url, mContext.getPackageName()))));
         if (editor != null) {
             editor.putBoolean(PREF_RATE_CLICKED, true);
             editor.commit();
@@ -206,53 +198,5 @@ public class Appirater {
 
         dialog.setContentView(layout);        
         dialog.show();        
-    }
-
-    private static void showLoveDialog(final Context mContext, final SharedPreferences.Editor editor) {
-
-        final Dialog dialog = new Dialog(mContext);
-        LinearLayout layout = (LinearLayout) LayoutInflater.from(mContext).inflate(R.layout.loveapp, null);
-
-        TextView textView = (TextView)layout.findViewById(R.id.love_dialog_message);
-        Button yesButton = (Button)layout.findViewById(R.id.love_dialog_yes);
-        Button noButton = (Button)layout.findViewById(R.id.love_dialog_no);
-
-        textView.setText(String.format(mContext.getString(R.string.love_dialog_content, appName)));
-        yesButton.setText(String.format(mContext.getString(R.string.love_dialog_yes)));
-        noButton.setText(String.format(mContext.getString(R.string.love_dialog_no)));
-
-        yesButton.setOnClickListener(new OnClickListener(){
-
-            @Override
-            public void onClick(View v) {
-                if (editor != null) {
-                    editor.putBoolean(PREF_APP_LOVE_CLICKED, true);
-                    editor.commit();
-                }
-                dialog.dismiss();
-                showRateDialog(mContext, editor);
-            }
-        });
-
-        noButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (editor != null) {
-                    editor.putBoolean(PREF_DONT_SHOW, true);
-                    editor.commit();
-                }
-                dialog.dismiss();
-
-                Intent intent = new Intent();
-                intent.setAction("com.sbstrm.appirater.Appirater");
-                intent.putExtra("HATE_APP", true);
-                v.getContext().sendBroadcast(intent);
-            }
-        });
-
-
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(layout, dialog.getWindow().getAttributes());
-        dialog.show();
     }
 }
