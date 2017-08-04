@@ -44,16 +44,18 @@ public class Appirater {
 	private static final String PREF_DATE_FIRST_LAUNCHED = "date_firstlaunch";
 	private static final String PREF_APP_VERSION_CODE = "versioncode";
     private static final String PREF_APP_LOVE_CLICKED= "loveclicked";
+    public static String appName;
+    public static boolean testMode, askIfLoved; 
 	
-    public static void appLaunched(Context mContext) {
-    	boolean testMode = mContext.getResources().getBoolean(R.bool.appirator_test_mode);
+    public static void appLaunched(Context mContext, int days_until_prompt, int launches_until_prompt,
+                                   int events_until_prompt, int days_before_reminding) {
         SharedPreferences prefs = mContext.getSharedPreferences(mContext.getPackageName()+".appirater", 0);
         if(!testMode && (prefs.getBoolean(PREF_DONT_SHOW, false) || prefs.getBoolean(PREF_RATE_CLICKED, false))) {return;}
         
         SharedPreferences.Editor editor = prefs.edit();
         
         if(testMode){
-            if (prefs.getBoolean(PREF_APP_LOVE_CLICKED, false)) {
+            if (!askIfLoved || prefs.getBoolean(PREF_APP_LOVE_CLICKED, false)) {
                 showRateDialog(mContext,editor);
             } else {
                 showLoveDialog(mContext, editor);
@@ -95,19 +97,19 @@ public class Appirater {
         }
         
         // Wait at least n days or m events before opening
-        if (launch_count >= mContext.getResources().getInteger(R.integer.appirator_launches_until_prompt)) {
-			long millisecondsToWait = mContext.getResources().getInteger(R.integer.appirator_days_until_prompt) * 24 * 60 * 60 * 1000L;			
-			if (System.currentTimeMillis() >= (date_firstLaunch + millisecondsToWait) || event_count >= mContext.getResources().getInteger(R.integer.appirator_events_until_prompt)) {
+        if (launch_count >= launches_until_prompt) {
+			long millisecondsToWait = days_until_prompt * 24 * 60 * 60 * 1000L;			
+			if (System.currentTimeMillis() >= (date_firstLaunch + millisecondsToWait) || event_count >= events_until_prompt) {
 				if(date_reminder_pressed == 0){
-                    if (prefs.getBoolean(PREF_APP_LOVE_CLICKED, false)){
+                    if (!askIfLoved || prefs.getBoolean(PREF_APP_LOVE_CLICKED, false)){
                         showRateDialog(mContext, editor);
                     } else {
                         showLoveDialog(mContext, editor);
                     }
 				}else{
-					long remindMillisecondsToWait = mContext.getResources().getInteger(R.integer.appirator_days_before_reminding) * 24 * 60 * 60 * 1000L;
+					long remindMillisecondsToWait = days_before_reminding * 24 * 60 * 60 * 1000L;
 					if(System.currentTimeMillis() >= (remindMillisecondsToWait + date_reminder_pressed)){
-                        if (prefs.getBoolean(PREF_APP_LOVE_CLICKED, false)) {
+                        if (!askIfLoved || prefs.getBoolean(PREF_APP_LOVE_CLICKED, false)) {
                             showRateDialog(mContext, editor);
                         } else {
                             showLoveDialog(mContext, editor);
@@ -129,7 +131,6 @@ public class Appirater {
 
 	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
     public static void significantEvent(Context mContext) {
-        boolean testMode = mContext.getResources().getBoolean(R.bool.appirator_test_mode);
         SharedPreferences prefs = mContext.getSharedPreferences(mContext.getPackageName()+".appirater", 0);
         if(!testMode && (prefs.getBoolean(PREF_DONT_SHOW, false) || prefs.getBoolean(PREF_RATE_CLICKED, false))) {return;}
 
@@ -148,7 +149,6 @@ public class Appirater {
 
 	@SuppressLint("NewApi")
 	private static void showRateDialog(final Context mContext, final SharedPreferences.Editor editor) {
-    	String appName = mContext.getString(R.string.appirator_app_title);
         final Dialog dialog = new Dialog(mContext);
         
         if (Build.VERSION.RELEASE.startsWith("1.") || Build.VERSION.RELEASE.startsWith("2.0") || Build.VERSION.RELEASE.startsWith("2.1")){
@@ -217,7 +217,7 @@ public class Appirater {
         Button yesButton = (Button)layout.findViewById(R.id.love_dialog_yes);
         Button noButton = (Button)layout.findViewById(R.id.love_dialog_no);
 
-        textView.setText(String.format(mContext.getString(R.string.love_dialog_content)));
+        textView.setText(String.format(mContext.getString(R.string.love_dialog_content, appName)));
         yesButton.setText(String.format(mContext.getString(R.string.love_dialog_yes)));
         noButton.setText(String.format(mContext.getString(R.string.love_dialog_no)));
 
